@@ -8,6 +8,11 @@
 #import <Foundation/Foundation.h>
 #import "OKDecoder.h"
 
+/* -------- configurable integration points --------------------------- */
+static NSString * const kOutputDir        = @"~/Code/mudictation";   // ≤-- change if you like
+static NSString * const kWavFileName      = @"decoded.wav";
+static NSString * const kTriggerFileName  = @"remote.trigger";
+
 @interface NSData (Hexadecimal)
 - (NSData *)initWithHexadecimalString:(NSString *)string;
 + (NSData *)dataWithHexadecimalString:(NSString *)string;
@@ -105,6 +110,13 @@ int main(int argc, const char *argv[]) {
         NSMutableString *frames = [NSMutableString string];
         NSMutableString *frame  = [NSMutableString string];
 
+        /* make sure the output directory exists */
+        NSString *dir = [kOutputDir stringByExpandingTildeInPath];
+        [[NSFileManager defaultManager] createDirectoryAtPath:dir
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:nil];
+
         /* ------------------------------------------------------------------ */
         OKDecoder *opusDecoder = [[OKDecoder alloc] initWithSampleRate:16000 numberOfChannels:1];
         NSError   *error       = nil;
@@ -151,9 +163,10 @@ int main(int argc, const char *argv[]) {
                         }];
                     }
                     [NSThread sleepForTimeInterval:0.5];          // let decoder finish
-
                     /* -------------------- write WAV ------------------------------ */
-                    FILE *f = fopen("decoded.wav", "w");
+                    NSString *wavPath = [[kOutputDir stringByExpandingTildeInPath]
+                                         stringByAppendingPathComponent:kWavFileName];
+                    FILE *f = fopen([wavPath fileSystemRepresentation], "w");
                     if (!f) { perror("decoded.wav"); break; }
                     int dataSz     = (int)[decoded length];
                     int totalSz    = 36 + dataSz;
@@ -164,7 +177,7 @@ int main(int argc, const char *argv[]) {
                     uint16_t bitsPer    = 16;
                     uint32_t byteRate   = sampleRate * channels * bitsPer / 8;
                     uint16_t blkAlign   = channels * bitsPer / 8;
-                    
+
                     fwrite("RIFF", 1, 4, f); fwrite(&totalSz, 4, 1, f);
                     fwrite("WAVEfmt ", 1, 8, f); fwrite(&fmtChunk, 4, 1, f);
                     fwrite(&audioFmt, 2, 1, f); fwrite(&channels, 2, 1, f);
@@ -173,7 +186,19 @@ int main(int argc, const char *argv[]) {
                     fwrite("data", 1, 4, f); fwrite(&dataSz, 4, 1, f);
                     fwrite(decoded.bytes, 1, dataSz, f);
                     fclose(f);
-                    printf("Saved decoded.wav (%d bytes)\n", dataSz + 44);
+                    printf("Saved %s (%d bytes)\n",
+                           [wavPath fileSystemRepresentation], dataSz + 44);
+
+                    /* -------------------- drop trigger file --------------------- */
+                    NSString *trigPath = [[kOutputDir stringByExpandingTildeInPath]
+                                          stringByAppendingPathComponent:kTriggerFileName];
+                    [@"trigger" writeToFile:trigPath
+                                atomically:YES
+                                  encoding:NSUTF8StringEncoding
+                                     error:nil];
+                    printf("Created trigger file: %s\n",
+                           [trigPath fileSystemRepresentation]);
+
                     break;          // stop after one utterance
                 }
 
