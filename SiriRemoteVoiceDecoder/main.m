@@ -179,7 +179,9 @@ int main(int argc, const char *argv[]) {
 
                 /* -------------------------- collect Opus frames ------------------ */
                 if (voiceStarted) {
-                    BOOL isHeader = ([inputData hasPrefix:@"5E 20"] || [inputData hasPrefix:@"40 20"]);
+                    BOOL isHeader = ([inputData hasPrefix:@"5E 20"] ||
+                                     [inputData hasPrefix:@"40 20"] ||
+                                     [inputData hasPrefix:@"51 20"]);
                     if (isHeader && [inputData length] > index_b8 + 1 &&
                         [[inputData substringWithRange:NSMakeRange(index_b8, 2)] isEqualToString:@"B8"]) {
                         /* flush previous frame */
