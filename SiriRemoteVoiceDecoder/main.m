@@ -199,7 +199,7 @@ int main(int argc, const char *argv[]) {
                     printf("Created trigger file: %s\n",
                            [trigPath fileSystemRepresentation]);
 
-                    break;          // stop after one utterance
+                    // Removed break statement to continue listening for new utterances
                 }
 
                 /* -------------------------- collect Opus frames ------------------ */
